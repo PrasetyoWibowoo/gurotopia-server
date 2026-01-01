@@ -1,23 +1,29 @@
-FROM gcc:13
+FROM debian:bookworm
 
 WORKDIR /app
 
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     make \
+    g++ \
     libssl-dev \
     libsqlite3-dev \
     default-libmysqlclient-dev \
-    libmariadb-dev \
-    libmariadb-dev-compat \
+    libenet-dev \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . . 
+# Copy source code
+COPY . .
 
-RUN make -j$(nproc)
+# Build the application
+RUN make
 
+# Verify the executable exists
+RUN ls -la main.out && file main.out
+
+# Make it executable (just in case)
 RUN chmod +x main.out
 
-EXPOSE 17091
-
+# Run the application
 CMD ["./main. out"]
