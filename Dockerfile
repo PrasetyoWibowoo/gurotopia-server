@@ -1,43 +1,36 @@
-FROM ubuntu:22.04
+FROM ubuntu:23.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Install dependencies sesuai dokumentasi Gurotopia
+# Install dependencies dengan GCC yang support C++23
 RUN apt-get update && apt-get install -y \
     build-essential \
     make \
-    gcc \
-    g++ \
+    gcc-13 \
+    g++-13 \
     libssl-dev \
     openssl \
     libsqlite3-dev \
     sqlite3 \
     libmysqlclient-dev \
-    default-libmysqlclient-dev \
     pkg-config \
     netcat-openbsd \
-    curl \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
-COPY . . 
+# Copy source
+COPY . .
 
-# Compile (sama seperti dokumentasi)
+# Compile dengan GCC-13
 RUN make clean || true && \
-    make -j$(nproc) && \
+    CXX=g++-13 CC=gcc-13 make -j$(nproc) && \
     chmod +x main.out && \
     ls -lah main.out
 
-# Expose ports
 EXPOSE 17091
 EXPOSE 17092
 
-# Run dengan output logs
-CMD ["sh", "-c", "echo '=== Gurotopia Server Starting ===' && \
-     echo 'Working Directory: ' && pwd && \
-     echo 'Binary Info:' && ls -lah main.out && \
-     echo 'Environment Variables:' && env | grep MYSQL || echo 'No MYSQL vars' && \
-     echo 'Starting server.. .' && \
-     ./main. out 2>&1"]
+CMD ["sh", "-c", "echo '=== Gurotopia Starting ===' && ./main.out 2>&1"]
