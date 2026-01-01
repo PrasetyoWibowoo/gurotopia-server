@@ -18,7 +18,7 @@ COPY . .
 
 RUN make
 
-RUN ls -la main.out && chmod +x main. out
+RUN chmod +x main. out
 
 # Create startup script
 RUN cat > /start.sh <<'EOF'
