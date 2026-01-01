@@ -1,18 +1,9 @@
-FROM ubuntu:23.04
+FROM ubuntu:latest
 
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libssl-dev \
-    libsqlite3-dev \
-    libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y build-essential libssl-dev libsqlite3-dev
 
 COPY . .
 
 RUN make -j$(nproc)
 
-EXPOSE 17091
-
-CMD ["./main.out"]
+CMD ["/main.out"]
