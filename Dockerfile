@@ -39,5 +39,5 @@ echo "MySQL is up - executing command"\n\
 exec "$@"\n\
 ' > /wait-for-mysql.sh && chmod +x /wait-for-mysql.sh
 
-# Use wait script before starting app
-CMD ["/wait-for-mysql.sh", "${MYSQL_HOST}", "${MYSQL_PORT}", "./main.out"]
+# Use shell form to expand variables
+CMD /wait-for-mysql.sh "${MYSQL_HOST}" "${MYSQL_PORT}" ./main.out
