@@ -6,12 +6,13 @@ RUN apt-get update && apt-get install -y \
     make \
     libssl-dev \
     libsqlite3-dev \
-    libmysqlclient-dev \
     default-libmysqlclient-dev \
+    libmariadb-dev \
+    libmariadb-dev-compat \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY . . 
 
 RUN make -j$(nproc)
 
@@ -19,4 +20,4 @@ RUN chmod +x main.out
 
 EXPOSE 17091
 
-CMD ["./main.out"]
+CMD ["./main. out"]
