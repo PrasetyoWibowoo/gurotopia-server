@@ -1,27 +1,26 @@
-# Dockerfile untuk Gurotopia
-FROM ubuntu: 22.04
+FROM ubuntu:22.04
 
-# Set working directory SEBELUM copy
 WORKDIR /app
 
-# Install dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
+    make \
+    g++ \
     libssl-dev \
     libsqlite3-dev \
     libmysqlclient-dev \
     pkg-config \
+    netcat \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
-COPY . .
+COPY . . 
 
-# Build dengan Makefile
-RUN make -j$(nproc)
+RUN make clean || true && \
+    make -j$(nproc)
 
-# Expose ports
+RUN chmod +x main. out
+
 EXPOSE 17091
 EXPOSE 17092
 
-# Run server
 CMD ["./main.out"]
