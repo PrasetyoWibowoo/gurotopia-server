@@ -15,31 +15,40 @@ RUN apt-get update && apt-get install -y \
     gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . . 
+COPY . .  
 
 RUN make && chmod +x main.out
 
-# Rename config.json to template
-RUN mv config.json config. json.template || true
+# Rename config. json to template
+RUN mv config.json config.json.template || true
 
 RUN cat > /start.sh <<'EOF'
 #!/bin/bash
 set -e
 
 echo "=== ENVIRONMENT VARIABLES DEBUG ==="
-echo "MYSQL_HOST = [$MYSQL_HOST]"
-echo "MYSQL_PORT = [$MYSQL_PORT]"
-echo "MYSQL_USER = [$MYSQL_USER]"
-echo "MYSQL_DATABASE = [$MYSQL_DATABASE]"
+echo "MYSQLHOST = [$MYSQLHOST]"
+echo "MYSQLPORT = [$MYSQLPORT]"
+echo "MYSQLUSER = [$MYSQLUSER]"
+echo "MYSQLDATABASE = [$MYSQLDATABASE]"
 echo "===================================="
 
-MYSQL_HOST=${MYSQL_HOST:-mysql.railway.internal}
-MYSQL_PORT=${MYSQL_PORT:-3306}
-MYSQL_USER=${MYSQL_USER:-root}
-MYSQL_DATABASE=${MYSQL_DATABASE:-railway}
+# Set defaults
+MYSQLHOST=${MYSQLHOST:-mysql.railway.internal}
+MYSQLPORT=${MYSQLPORT:-3306}
+MYSQLUSER=${MYSQLUSER:-root}
+MYSQLDATABASE=${MYSQLDATABASE:-railway}
+
+# Map to standard names for config. json template
+export MYSQL_HOST=$MYSQLHOST
+export MYSQL_PORT=$MYSQLPORT
+export MYSQL_USER=$MYSQLUSER
+export MYSQL_PASSWORD=$MYSQLPASSWORD
+export MYSQL_DATABASE=$MYSQLDATABASE
 
 echo "Using MYSQL_HOST:  $MYSQL_HOST"
 echo "Using MYSQL_PORT: $MYSQL_PORT"
+echo "Using MYSQL_USER: $MYSQL_USER"
 
 echo "Waiting for MySQL at $MYSQL_HOST:$MYSQL_PORT..."
 until nc -z "$MYSQL_HOST" "$MYSQL_PORT"; do
@@ -62,11 +71,9 @@ fi
 echo "Starting Growtopia server..."
 ./main.out 2>&1 || {
   echo "===================================="
-  echo "ERROR:  Server crashed with exit code $?"
+  echo "ERROR: Server crashed with exit code $?"
   echo "===================================="
-  # Check for log files
   find /app -name "*.log" -exec echo "Log file: {}" \; -exec tail -50 {} \;
-  # Keep container alive for debugging
   echo "Container will stay alive for 1 hour for debugging..."
   sleep 3600
   exit 1
