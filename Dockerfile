@@ -1,6 +1,9 @@
-FROM debian:bookworm
+FROM ubuntu:24.04
 
 WORKDIR /app
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -8,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     libssl-dev \
     libsqlite3-dev \
-    default-libmysqlclient-dev \
+    libmysqlclient-dev \
     libenet-dev \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
@@ -20,10 +23,7 @@ COPY . .
 RUN make
 
 # Verify the executable exists
-RUN ls -la main.out && file main.out
-
-# Make it executable (just in case)
-RUN chmod +x main.out
+RUN ls -la main.out && chmod +x main.out
 
 # Run the application
-CMD ["./main. out"]
+CMD ["./main.out"]
