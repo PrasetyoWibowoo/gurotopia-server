@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY . . 
 
 RUN make
 
 RUN ls -la main.out && chmod +x main. out
 
-# Create startup script dengan bash
-COPY <<'EOF' /start.sh
+# Create startup script
+RUN cat > /start.sh <<'EOF'
 #!/bin/bash
 set -e
 
-# Debug: Print all environment variables
+# Debug:  Print all environment variables
 echo "=== ENVIRONMENT VARIABLES DEBUG ==="
 echo "MYSQL_HOST = [$MYSQL_HOST]"
 echo "MYSQL_PORT = [$MYSQL_PORT]"
@@ -53,4 +53,4 @@ EOF
 
 RUN chmod +x /start.sh
 
-CMD ["/start.sh"]
+CMD ["/start. sh"]
