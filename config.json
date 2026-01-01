@@ -1,0 +1,37 @@
+{
+  "server": {
+    "name": "Gurotopia Private Server",
+    "port": 17091,
+    "max_players": 100,
+    "cdn_host": "0.0.0.0",
+    "cdn_port": 80
+  },
+  "database": {
+    "type": "mysql",
+    "host": "${MYSQL_HOST}",
+    "port": "${MYSQL_PORT}",
+    "user": "${MYSQL_USER}",
+    "password": "${MYSQL_PASSWORD}",
+    "database": "${MYSQL_DATABASE}",
+    "pool_size": 10
+  },
+  "admin": {
+    "default_owners": ["EIN"]
+  },
+  "game": {
+    "version": "4.50",
+    "protocol": 191,
+    "default_world": "START"
+  },
+  "security": {
+    "bcrypt_cost": 12,
+    "max_login_attempts": 5,
+    "session_timeout": 3600
+  },
+  "features": {
+    "auto_ban": true,
+    "anti_spam": true,
+    "world_backups": true,
+    "logging": true
+  }
+}
