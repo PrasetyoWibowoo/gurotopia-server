@@ -4,6 +4,7 @@ WORKDIR /app
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install Node.js + C++ build tools
 RUN apt-get update && apt-get install -y \
     make \
     g++ \
@@ -15,26 +16,31 @@ RUN apt-get update && apt-get install -y \
     gettext-base \
     procps \
     net-tools \
-    socat \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-COPY .  .    
+COPY .  . 
 
+# Build game server
 RUN make && chmod +x main.out
 
-RUN mv config.json config.json.template || true
+# Install Node.js dependencies for proxy
+RUN npm install ws
+
+RUN mv config. json config.json.template || true
 
 RUN cat > /start.sh <<'EOF'
 #!/bin/bash
 set -e
 
-echo "=== ENVIRONMENT VARIABLES DEBUG ==="
+echo "=== ENVIRONMENT VARIABLES ==="
 echo "MYSQLHOST = [$MYSQLHOST]"
-echo "MYSQLPORT = [$MYSQLPORT]"
-echo "MYSQLUSER = [$MYSQLUSER]"
-echo "MYSQLDATABASE = [$MYSQLDATABASE]"
-echo "===================================="
+echo "PORT = [$PORT]"
+echo "============================="
 
+# MySQL setup
 MYSQLHOST=${MYSQLHOST:-mysql. railway.internal}
 MYSQLPORT=${MYSQLPORT:-3306}
 MYSQLUSER=${MYSQLUSER:-root}
@@ -46,63 +52,57 @@ export MYSQL_USER=$MYSQLUSER
 export MYSQL_PASSWORD=$MYSQLPASSWORD
 export MYSQL_DATABASE=$MYSQLDATABASE
 
-echo "Using MYSQL_HOST: $MYSQL_HOST"
-echo "Using MYSQL_PORT: $MYSQL_PORT"
-echo "Using MYSQL_USER: $MYSQL_USER"
-
-echo "Waiting for MySQL at $MYSQL_HOST:$MYSQL_PORT..."
+# Wait for MySQL
+echo "Waiting for MySQL..."
 until nc -z "$MYSQL_HOST" "$MYSQL_PORT"; do
-  echo "MySQL is unavailable - sleeping"
   sleep 2
 done
+echo "✓ MySQL connected"
 
-echo "MySQL is up!"
-echo "===================================="
-
+# Generate config
 if [ -f config.json. template ]; then
-  echo "Generating config.json from template..."
-  
-  # Change server port to localhost only since we'll proxy it
-  export SERVER_HOST="127.0.0.1"
-  export SERVER_PORT="17091"
-  
   envsubst < config.json.template > config.json
-  echo "Config generated:"
-  cat config.json
-  echo "===================================="
+  echo "✓ Config generated"
 fi
 
-echo "Starting Growtopia server on localhost:17091..."
+# Start game server on localhost
+echo "Starting game server on localhost: 17091..."
 ./main.out &
-SERVER_PID=$! 
+SERVER_PID=$!
 
-echo "Server process started with PID: $SERVER_PID"
-echo "Waiting for server to bind to port..."
 sleep 5
 
-# Check if server is listening
 if netstat -tuln | grep -q ":17091"; then
-  echo "✓ Server listening on port 17091"
+  echo "✓ Game server listening on port 17091"
 else
-  echo "✗ WARNING: Server not listening on port 17091"
+  echo "✗ WARNING: Game server not listening"
 fi
 
-echo "===================================="
-echo "Server is ready!"
-echo "===================================="
+# Start WebSocket proxy on Railway PORT
+echo "Starting WebSocket proxy on port ${PORT:-8080}..."
+node proxy.js &
+PROXY_PID=$!
 
-# Monitor server
-while kill -0 $SERVER_PID 2>/dev/null; do
+sleep 3
+echo "✓ WebSocket proxy running (PID: $PROXY_PID)"
+
+echo "============================="
+echo "🚀 All services ready!"
+echo "============================="
+
+# Monitor both processes
+while kill -0 $SERVER_PID 2>/dev/null && kill -0 $PROXY_PID 2>/dev/null; do
   sleep 60
-  echo "[$(date +%H:%M:%S)] Server still running (PID: $SERVER_PID)"
+  echo "[$(date +%H:%M:%S)] Server & Proxy running"
 done
 
-echo "ERROR: Server process died!"
+echo "ERROR: Process died!"
 exit 1
 EOF
 
 RUN chmod +x /start.sh
 
-EXPOSE 17091
+# Railway auto-assigns PORT
+EXPOSE 8080
 
 CMD ["/start.sh"]
