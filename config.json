@@ -5,13 +5,13 @@
     "max_players": 100,
     "name": "Gurotopia Server"
   },
-  "database":  {
+  "database": {
     "type": "mysql",
     "host": "${MYSQL_HOST}",
     "port": 3306,
     "user":  "${MYSQL_USER}",
     "password": "${MYSQL_PASSWORD}",
-    "database": "${MYSQL_DATABASE}"
+    "database":  "${MYSQL_DATABASE}"
   },
   "admin": {
     "owners": ["YourGrowtopiaUsername"]
@@ -19,8 +19,8 @@
   "security": {
     "bcrypt_rounds": 12
   },
-  "logging": {
+  "logging":  {
     "level": "info",
-    "output":  "stdout"
+    "output": "stdout"
   }
 }
