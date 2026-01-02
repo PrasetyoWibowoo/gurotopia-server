@@ -102,7 +102,7 @@ echo "ERROR: Server died!"
 exit 1
 EOF
 
-RUN chmod +x /start. sh
+RUN chmod +x /start.sh
 
 EXPOSE 17091
 
