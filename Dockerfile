@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     gettext-base \
     procps \
+    net-tools \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .   
+COPY .  .    
 
 RUN make && chmod +x main.out
 
@@ -33,7 +35,7 @@ echo "MYSQLUSER = [$MYSQLUSER]"
 echo "MYSQLDATABASE = [$MYSQLDATABASE]"
 echo "===================================="
 
-MYSQLHOST=${MYSQLHOST:-mysql.railway.internal}
+MYSQLHOST=${MYSQLHOST:-mysql. railway.internal}
 MYSQLPORT=${MYSQLPORT:-3306}
 MYSQLUSER=${MYSQLUSER:-root}
 MYSQLDATABASE=${MYSQLDATABASE:-railway}
@@ -44,9 +46,9 @@ export MYSQL_USER=$MYSQLUSER
 export MYSQL_PASSWORD=$MYSQLPASSWORD
 export MYSQL_DATABASE=$MYSQLDATABASE
 
-echo "Using MYSQL_HOST:   $MYSQL_HOST"
-echo "Using MYSQL_PORT:  $MYSQL_PORT"
-echo "Using MYSQL_USER:  $MYSQL_USER"
+echo "Using MYSQL_HOST: $MYSQL_HOST"
+echo "Using MYSQL_PORT: $MYSQL_PORT"
+echo "Using MYSQL_USER: $MYSQL_USER"
 
 echo "Waiting for MySQL at $MYSQL_HOST:$MYSQL_PORT..."
 until nc -z "$MYSQL_HOST" "$MYSQL_PORT"; do
@@ -59,43 +61,43 @@ echo "===================================="
 
 if [ -f config.json. template ]; then
   echo "Generating config.json from template..."
+  
+  # Change server port to localhost only since we'll proxy it
+  export SERVER_HOST="127.0.0.1"
+  export SERVER_PORT="17091"
+  
   envsubst < config.json.template > config.json
   echo "Config generated:"
   cat config.json
   echo "===================================="
 fi
 
-echo "Starting Growtopia server..."
-echo "===================================="
-
-# Start server in background
+echo "Starting Growtopia server on localhost:17091..."
 ./main.out &
-SERVER_PID=$!
+SERVER_PID=$! 
 
 echo "Server process started with PID: $SERVER_PID"
-echo "Monitoring server status..."
+echo "Waiting for server to bind to port..."
+sleep 5
 
-# Monitor process
+# Check if server is listening
+if netstat -tuln | grep -q ":17091"; then
+  echo "✓ Server listening on port 17091"
+else
+  echo "✗ WARNING: Server not listening on port 17091"
+fi
+
+echo "===================================="
+echo "Server is ready!"
+echo "===================================="
+
+# Monitor server
 while kill -0 $SERVER_PID 2>/dev/null; do
-  echo "[$(date +%H:%M:%S)] Server is running (PID: $SERVER_PID)"
-  
-  # Show any log files if they exist
-  if ls *.log 2>/dev/null; then
-    echo "--- Recent logs ---"
-    tail -10 *.log 2>/dev/null | head -20
-  fi
-  
-  sleep 30
+  sleep 60
+  echo "[$(date +%H:%M:%S)] Server still running (PID: $SERVER_PID)"
 done
 
-echo "===================================="
 echo "ERROR: Server process died!"
-echo "Exit code: $?"
-echo "===================================="
-
-# Show final logs
-find /app -name "*.log" -exec echo "=== {} ===" \; -exec cat {} \;
-
 exit 1
 EOF
 
