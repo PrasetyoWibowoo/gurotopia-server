@@ -4,7 +4,6 @@ WORKDIR /app
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Node.js + C++ build tools
 RUN apt-get update && apt-get install -y \
     make \
     g++ \
@@ -16,20 +15,13 @@ RUN apt-get update && apt-get install -y \
     gettext-base \
     procps \
     net-tools \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 COPY .  . 
 
-# Build game server
 RUN make && chmod +x main.out
 
-# Install Node.js dependencies for proxy
-RUN npm install ws
-
-RUN mv config. json config.json.template || true
+RUN mv config.json config.json.template || true
 
 RUN cat > /start.sh <<'EOF'
 #!/bin/bash
@@ -39,6 +31,9 @@ echo "=== ENVIRONMENT VARIABLES ==="
 echo "MYSQLHOST = [$MYSQLHOST]"
 echo "PORT = [$PORT]"
 echo "============================="
+
+# Get Railway PORT or default to 17091
+SERVER_PORT=${PORT:-17091}
 
 # MySQL setup
 MYSQLHOST=${MYSQLHOST:-mysql. railway.internal}
@@ -59,50 +54,56 @@ until nc -z "$MYSQL_HOST" "$MYSQL_PORT"; do
 done
 echo "✓ MySQL connected"
 
-# Generate config
-if [ -f config.json. template ]; then
+# Generate config with dynamic port
+if [ -f "config.json.template" ]; then
+  export SERVER_HOST="0.0.0.0"
+  export SERVER_PORT=$SERVER_PORT
+  
   envsubst < config.json.template > config.json
-  echo "✓ Config generated"
+  
+  # Force update port in config
+  sed -i "s/\"port\"[[:space:]]*:[[:space:]]*[0-9]*/\"port\":  $SERVER_PORT/" config.json
+  
+  echo "✓ Config generated with port $SERVER_PORT"
+  echo "--- Config content:  ---"
+  cat config.json
+  echo "--- End config ---"
 fi
 
-# Start game server on localhost
-echo "Starting game server on localhost: 17091..."
-./main.out &
-SERVER_PID=$!
+echo "============================="
+echo "Starting server on 0.0.0.0:$SERVER_PORT..."
+./main.out 2>&1 &
+SERVER_PID=$! 
 
 sleep 5
 
-if netstat -tuln | grep -q ":17091"; then
-  echo "✓ Game server listening on port 17091"
+# Check if listening
+echo "Checking listening ports..."
+if netstat -tuln | grep ":$SERVER_PORT"; then
+  echo "✓ Server LISTENING on port $SERVER_PORT"
+  netstat -tuln | grep ": $SERVER_PORT"
 else
-  echo "✗ WARNING: Game server not listening"
+  echo "✗ Server NOT listening on port $SERVER_PORT"
+  echo "All listening ports:"
+  netstat -tuln
 fi
 
-# Start WebSocket proxy on Railway PORT
-echo "Starting WebSocket proxy on port ${PORT:-8080}..."
-node proxy.js &
-PROXY_PID=$!
-
-sleep 3
-echo "✓ WebSocket proxy running (PID: $PROXY_PID)"
-
 echo "============================="
-echo "🚀 All services ready!"
+echo "🚀 Server ready on port $SERVER_PORT!"
 echo "============================="
 
-# Monitor both processes
-while kill -0 $SERVER_PID 2>/dev/null && kill -0 $PROXY_PID 2>/dev/null; do
+# Monitor
+while kill -0 $SERVER_ID 2>/dev/null; do
   sleep 60
-  echo "[$(date +%H:%M:%S)] Server & Proxy running"
+  echo "[$(date +%H:%M:%S)] Server running (PID: $SERVER_PID)"
 done
 
-echo "ERROR: Process died!"
+echo "ERROR: Server died!"
 exit 1
 EOF
 
-RUN chmod +x /start.sh
+RUN chmod +x /start. sh
 
-# Railway auto-assigns PORT
-EXPOSE 8080
+EXPOSE 17091
 
 CMD ["/start.sh"]
